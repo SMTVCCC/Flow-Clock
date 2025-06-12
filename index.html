@@ -196,6 +196,9 @@
             opacity: 0.7;
         }
     </style>
+    <div id="safari-warning" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background-color: #ffcc00; color: black; padding: 10px 20px; border-radius: 5px; z-index: 2000; font-size: 0.9rem;">
+        提示：Safari浏览器可能无法自动播放声音，建议使用Chrome或Firefox以获得最佳体验。
+    </div>
 </head>
 <body>
     <div class="top-controls">
@@ -708,6 +711,19 @@
         
         // 初始化
         init();
+
+        // 浏览器检测
+        function checkBrowser() {
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            if (isSafari) {
+                const warningDiv = document.getElementById('safari-warning');
+                warningDiv.style.display = 'block';
+                setTimeout(() => {
+                    warningDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+        checkBrowser();
     </script>
 </body>
 </html>
