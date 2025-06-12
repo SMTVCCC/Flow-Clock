@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心流时钟 - 使用演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .demo-container {
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .title {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #4A90E2;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.8s ease;
+            margin-bottom: 2rem;
+        }
+
+        .title.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .timer-preview {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .timer-preview.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .time-display {
+            font-size: 4rem;
+            font-weight: bold;
+            margin: 2rem 0;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .btn-primary {
+            background: #4CAF50;
+        }
+
+        .btn-secondary {
+            background: #FF6B6B;
+        }
+
+        .btn.blink {
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .break-message {
+            display: none;
+            font-size: 2rem;
+            color: #FFD700;
+            margin: 2rem 0;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            color: #333;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #4CAF50;
+        }
+
+        .modal p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        .modal button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .final-screen {
+            display: none;
+            text-align: center;
+            color: white;
+        }
+
+        .final-title {
+            font-size: 3rem;
+            color: #4A90E2;
+            margin-bottom: 2rem;
+        }
+
+        .final-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 3rem;
+            color: #ccc;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 1.5rem 3rem;
+            border-radius: 15px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(76, 175, 80, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="title" id="title">How to use it?</div>
+        
+        <div class="timer-preview" id="timerPreview">
+            <div class="time-display" id="timeDisplay">05:00</div>
+            <div class="controls">
+                <button class="btn btn-primary" id="startBtn">开始专注</button>
+                <button class="btn btn-secondary" id="stopBtn">暂停</button>
+            </div>
+            <div class="break-message" id="breakMessage">
+                🎉 休息时间到！放松一下吧
+            </div>
+        </div>
+
+        <div class="final-screen" id="finalScreen">
+            <div class="final-title">Now</div>
+            <div class="final-subtitle">Let's start using it!</div>
+            <button class="start-btn" onclick="goToRealTimer()">开始使用计时器</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h3>🎉 恭喜完成！</h3>
+            <p>本次专注了5分钟，太棒了，再接再厉！</p>
+            <button onclick="closeModal()">知道了</button>
+        </div>
+    </div>
+
+    <audio id="breakSound" preload="auto">
+        <source src="1.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        let currentStep = 0;
+        let timeRemaining = 180; // 3分钟 = 180秒
+        let isBreaking = false;
+        let timer;
+
+        function startDemo() {
+            // 1秒后显示标题
+            setTimeout(() => {
+                document.getElementById('title').classList.add('show');
+            }, 1000);
+
+            // 3秒后显示计时器预览
+            setTimeout(() => {
+                document.getElementById('timerPreview').classList.add('show');
+            }, 3000);
+
+            // 5秒后开始专注按钮闪烁
+            setTimeout(() => {
+                document.getElementById('startBtn').classList.add('blink');
+            }, 5000);
+
+            // 7秒后开始模拟倒计时
+            setTimeout(() => {
+                startSimulation();
+            }, 7000);
+        }
+
+        function startSimulation() {
+            const startBtn = document.getElementById('startBtn');
+            const timeDisplay = document.getElementById('timeDisplay');
+            const breakMessage = document.getElementById('breakMessage');
+            
+            // 停止闪烁，改变按钮文字
+            startBtn.classList.remove('blink');
+            startBtn.textContent = '结束计时';
+            
+            // 快速倒计时（3秒完成3分钟）
+            timer = setInterval(() => {
+                timeRemaining--;
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(timer);
+                    showBreak();
+                }
+            }, 17); // 3000ms / 180 ≈ 17ms per second
+        }
+
+        function showBreak() {
+            const timeDisplay = document.getElementById('timeDisplay');
+            const breakMessage = document.getElementById('breakMessage');
+            const controls = document.querySelector('.controls');
+            const breakSound = document.getElementById('breakSound');
+            
+            // 隐藏控制按钮，显示休息消息
+            controls.style.display = 'none';
+            breakMessage.style.display = 'block';
+            timeDisplay.textContent = '00:00';
+            
+            // 播放休息音频
+            breakSound.play().catch(e => console.log('音频播放失败:', e));
+            
+            // 快速休息倒计时（1秒完成）
+            let breakTime = 5;
+            const breakTimer = setInterval(() => {
+                breakTime -= 5;
+                timeDisplay.textContent = `0${breakTime}:00`;
+                
+                if (breakTime <= 0) {
+                    clearInterval(breakTimer);
+                    endBreak();
+                }
+            }, 2000); // 1000ms / 5 = 200ms
+        }
+
+        function endBreak() {
+            const timeDisplay = document.getElementById('timeDisplay');
+            const breakMessage = document.getElementById('breakMessage');
+            const controls = document.querySelector('.controls');
+            const startBtn = document.getElementById('startBtn');
+            
+            // 恢复界面
+            breakMessage.style.display = 'none';
+            controls.style.display = 'flex';
+            timeDisplay.textContent = '00:00';
+            startBtn.textContent = '结束计时';
+            
+            // 结束计时按钮闪烁
+            startBtn.classList.add('blink');
+            
+            // 2秒后显示完成弹窗
+            setTimeout(() => {
+                startBtn.classList.remove('blink');
+                showCompletionModal();
+            }, 2000);
+        }
+
+        function showCompletionModal() {
+            document.getElementById('modalOverlay').style.display = 'flex';
+            
+            // 2秒后自动关闭弹窗
+            setTimeout(() => {
+                closeModal();
+            }, 2000);
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            
+            // 显示最终界面
+            setTimeout(() => {
+                document.getElementById('timerPreview').style.display = 'none';
+                document.getElementById('title').style.display = 'none';
+                document.getElementById('finalScreen').style.display = 'block';
+            }, 500);
+        }
+
+        function goToRealTimer() {
+            window.location.href = 'index.html';
+        }
+
+        // 开始演示
+        startDemo();
+    </script>
+</body>
+</html>

@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心流时钟(Flow Clock)</title>
+    <style>
+        :root {
+            --bg-primary: #121212;
+            --text-primary: #ffffff;
+            --accent-color: #00bcd4;
+            --ring-bg: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f7f9fc;
+            --text-primary: #2d3748;
+            --ring-bg: rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5rem;
+            }
+            
+            .controls {
+                gap: 0.5rem;
+                margin-top: 1.5rem;
+            }
+            
+            .motivation {
+                margin-top: 1.5rem;
+                max-width: 95%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .timer-container {
+                width: min(350px, 90vw);
+                height: min(350px, 90vw);
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            
+            button {
+                width: 200px;
+            }
+        }
+
+        .timer-container {
+            position: relative;
+            width: min(400px, 80vw);
+            height: min(400px, 80vw);
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            stroke-width: 8;
+            stroke: var(--accent-color);
+            fill: transparent;
+            transition: stroke-dashoffset 0.5s linear;
+        }
+
+        .progress-ring-bg {
+            stroke-width: 8;
+            stroke: var(--ring-bg);
+            fill: transparent;
+        }
+
+        .time-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            font-weight: 300;
+        }
+
+        .controls {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: transparent;
+            color: var(--text-primary);
+            border: 2px solid var(--accent-color);
+            border-radius: 50px;
+            padding: clamp(0.75rem, 2vw, 1rem) clamp(1.5rem, 4vw, 2.5rem);
+            font-size: clamp(1rem, 3vw, 1.3rem);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        button:hover {
+            background: var(--accent-color);
+            color: var(--bg-primary);
+        }
+
+        .motivation {
+            margin-top: 2rem;
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            text-align: center;
+            min-height: clamp(60px, 10vw, 80px);
+            max-width: 90%;
+            font-style: italic;
+            opacity: 0.8;
+            transition: opacity 0.5s ease;
+            padding: 0 1rem;
+        }
+
+        .top-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .theme-switch, .focus-mode {
+            cursor: pointer;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            padding: 5px;
+            border-radius: 50%;
+            transition: background-color 0.3s ease;
+        }
+
+        .theme-switch:hover, .focus-mode:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .focus-mode {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--text-primary);
+            border-radius: 20px;
+            padding: 5px 10px;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+        }
+
+        .focus-mode:hover {
+            background: var(--accent-color);
+            color: var(--bg-primary);
+        }
+
+        .help-btn {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--text-primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .help-btn:hover {
+            background: var(--accent-color);
+            color: var(--bg-primary);
+        }
+
+        .stats {
+            margin-top: 1rem;
+            font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-controls">
+        <div class="theme-switch" id="themeToggle">🌓</div>
+        <div class="focus-mode" id="focusMode">专注</div>
+        <div class="help-btn" id="helpBtn">?</div>
+    </div>
+    
+    <div class="timer-container">
+        <svg class="progress-ring" width="100%" height="100%" viewBox="0 0 400 400">
+            <circle class="progress-ring-bg" r="190" cx="200" cy="200"></circle>
+            <circle class="progress-ring-circle" stroke-dasharray="1194" r="190" cx="200" cy="200"></circle>
+        </svg>
+        <div class="time-display" id="timeDisplay">00:00</div>
+    </div>
+    
+    <div class="controls" id="controls">
+        <button id="startBtn">开始专注</button>
+        <button id="stopBtn">停止</button>
+    </div>
+    
+    <div class="break-message" id="breakMessage" style="display: none; margin-top: 1rem; font-size: clamp(1rem, 3vw, 1.5rem); color: var(--accent-color); text-align: center; font-weight: bold;"></div>
+    
+    <div class="skip-break-container" id="skipBreakContainer" style="display: none; margin-top: 1rem; text-align: center;">
+        <button id="skipBreakBtn" style="padding: 0.5rem 1rem; font-size: 0.9rem; background: var(--accent-color); color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">跳过休息</button>
+    </div>
+    
+    <!-- 自定义弹窗 -->
+    <div class="modal-overlay" id="modalOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; backdrop-filter: blur(5px);">
+        <div class="modal" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-color); border-radius: 16px; padding: 2rem; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color); min-width: 300px; text-align: center;">
+            <div class="modal-content" id="modalContent" style="color: var(--text-color); font-size: 1.1rem; line-height: 1.5; margin-bottom: 1.5rem;"></div>
+            <div class="modal-buttons" id="modalButtons" style="display: flex; gap: 1rem; justify-content: center;"></div>
+        </div>
+    </div>
+    
+    <div class="stats" id="stats"></div>
+    <div style="display: none;">
+        本次专注: <span id="sessionTime">0</span> 分钟
+    </div>
+    
+    <div class="motivation" id="motivationText">放弃不难，但坚持一定很NB！</div>
+    
+    <audio id="shortBreakSound" preload="auto">
+<source src="1.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="longBreakSound" preload="auto">
+<source src="2.mp3" type="audio/mpeg">
+</audio>
+
+    <script>
+        // DOM元素
+        const timeDisplay = document.getElementById('timeDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const themeToggle = document.getElementById('themeToggle');
+        const focusMode = document.getElementById('focusMode');
+        const motivationText = document.getElementById('motivationText');
+        const sessionTime = document.getElementById('sessionTime');
+        const circle = document.querySelector('.progress-ring-circle');
+        const shortBreakSound = document.getElementById('shortBreakSound');
+        const longBreakSound = document.getElementById('longBreakSound');
+        const controls = document.getElementById('controls');
+        const stats = document.getElementById('stats');
+        const breakMessage = document.getElementById('breakMessage');
+        const skipBreakContainer = document.getElementById('skipBreakContainer');
+        const skipBreakBtn = document.getElementById('skipBreakBtn');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalContent = document.getElementById('modalContent');
+        const modalButtons = document.getElementById('modalButtons');
+        const helpBtn = document.getElementById('helpBtn');
+        
+        // 配置参数
+        const config = {
+            minShortInterval: 3 * 60,    // 3分钟（秒）
+            maxShortInterval: 5 * 60,     // 5分钟（秒）
+            longInterval: 90 * 60,        // 90分钟（秒）
+            shortBreakDuration: 10,        // 10秒
+            longBreakDuration: 20 * 60     // 20分钟
+        };
+        
+        // 状态变量
+        let timer = null;
+        let breakTimer = null;
+        let secondsRemaining = 0;
+        let totalSeconds = 0;
+        let isRunning = false;
+        let startTime = null;
+        let accumulatedTime = 0;
+        let nextBreakTime = null;
+        let nextBreakDuration = 0;
+        let isBreaking = false;
+        let breakSecondsRemaining = 0;
+        let savedSecondsRemaining = 0;
+        
+        // 激励语句库
+        const motivations = [
+            "放弃不难，但坚持一定很NB！",
+            "躺平很简单，站起来试试？",
+            "放弃不难，但坚持一定很NB！",
+            "今日流下的汗水，终将成为明天照亮前路的光 ！",
+            "每天进步一点点，时间会给你答案",
+            "今天的汗水，是明天的掌声！",
+            "你只管努力，剩下的交给时间",
+            "想一千次，不如做一次！Just Do It！",
+            "再撑五分钟！再撑五分钟！",
+            "倒下了？爬起来继续！",
+            "别人停下的地方，就是你的起点！",
+            "你的坚持，终将美好！",
+            "相信自己，你真的比想象中强大！",
+            "不放弃就是最大的胜利！",
+            "没有白走的路，每一步都算数！",
+            "累了就歇会儿，但别掉头！",
+            "你想认输？问过昨天的努力吗！",
+            "卷不动了？先别躺，喝杯奶茶继续干！",
+            "摸鱼一时爽，DDL火葬场！",
+            "摆烂谁不会？支棱起来才叫酷！",
+            "今天的你，比昨天的你更NB！",
+            "努力不一定成功，但放弃一定很轻松！（反卷版）",
+            "划水是本能，坚持是本事！",
+            "你卷任你卷，我当赛博神仙",
+            "间歇性鸡血，持续性躺平，但此刻要专注！",
+            "躺不平卷不赢，那就45度人生！",
+            "摆又摆不烂，卷又卷不赢，学又学不进——先专注！",
+            "人生就像进度条，撑过99%卡顿期就是加载完成！",
+            "别让抖音偷走你的时间，专注当下！",
+            "躺平是天赋，坚持是超能力！",
+            "你可以菜，但不能不努力！",
+            "你努力的样子，像极了期末考前夜的自己！",
+            "放弃很简单，但坚持很cooool！",
+            "悄悄努力，然后惊艳所有人（包括自己）！",
+            "摆烂五分钟，卷王两小时！",
+            "坚持不下去？想想你的爱豆有多拼！",
+            "放下手机吧，好哥姐/.",
+            "黑夜再长，太阳总会升起"
+        ];
+        
+        // 初始化
+        function init() {
+            updateMotivation();
+            setInterval(updateMotivation, 15000); // 每15秒更新一次激励语
+        }
+        
+        // 开始计时器
+        function startTimer() {
+            if (isRunning) return;
+            
+            startTime = new Date();
+            isRunning = true;
+            startBtn.textContent = "结束计时";
+            stopBtn.textContent = "暂停";
+            
+            // 设置下次休息时间（随机3-5分钟）
+            setNextBreak();
+            
+            timer = setInterval(updateTimer, 1000);
+        }
+        
+        // 结束计时器
+        function endTimer() {
+            if (!isRunning) return;
+            
+            clearInterval(timer);
+            isRunning = false;
+            
+            // 计算专注时长
+            const focusMinutes = Math.floor(accumulatedTime / 60);
+            const focusSeconds = accumulatedTime % 60;
+            
+            let timeText = "";
+            if (focusMinutes > 0) {
+                timeText = `${focusMinutes}分钟`;
+                if (focusSeconds > 0) {
+                    timeText += `${focusSeconds}秒`;
+                }
+            } else {
+                timeText = `${focusSeconds}秒`;
+            }
+            
+            // 显示鼓励信息
+            showModal(
+                `🎉 本次专注了${timeText}，太棒了，再接再厉！`,
+                [
+                    {
+                        text: '好的',
+                        primary: true,
+                        onclick: () => {
+                            hideModal();
+                            resetTimer();
+                        }
+                    }
+                ]
+            );
+        }
+        
+        // 重置计时器
+        function resetTimer() {
+            clearInterval(timer);
+            isRunning = false;
+            secondsRemaining = 0;
+            accumulatedTime = 0;
+            totalSeconds = 0;
+            nextBreakTime = null;
+            
+            startBtn.textContent = "开始专注";
+            stopBtn.textContent = "停止";
+            
+            // 重置显示
+            updateDisplay();
+            sessionTime.textContent = "0";
+        }
+        
+        // 暂停/继续计时器
+        function pauseTimer() {
+            if (!isRunning) {
+                // 当前是暂停状态，继续计时
+                isRunning = true;
+                stopBtn.textContent = "暂停";
+                timer = setInterval(updateTimer, 1000);
+            } else {
+                // 当前是运行状态，暂停计时
+                clearInterval(timer);
+                isRunning = false;
+                stopBtn.textContent = "继续";
+            }
+        }
+        
+        // 显示自定义弹窗
+        function showModal(content, buttons) {
+            modalContent.innerHTML = content;
+            modalButtons.innerHTML = '';
+            
+            buttons.forEach(button => {
+                const btn = document.createElement('button');
+                btn.textContent = button.text;
+                btn.style.cssText = `
+                    padding: 0.75rem 1.5rem;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 1rem;
+                    transition: all 0.3s ease;
+                    ${button.primary ? 
+                        'background: var(--accent-color); color: white;' : 
+                        'background: var(--border-color); color: var(--text-color);'
+                    }
+                `;
+                btn.onclick = button.onclick;
+                modalButtons.appendChild(btn);
+            });
+            
+            modalOverlay.style.display = 'block';
+        }
+        
+        // 隐藏自定义弹窗
+        function hideModal() {
+            modalOverlay.style.display = 'none';
+        }
+        
+        // 跳过休息
+        function skipBreak() {
+            showModal(
+                '确定跳过休息吗？休息也很重要的！',
+                [
+                    {
+                        text: '取消',
+                        primary: false,
+                        onclick: hideModal
+                    },
+                    {
+                        text: '确定跳过',
+                        primary: true,
+                        onclick: () => {
+                            hideModal();
+                            
+                            // 清除休息计时器
+                            if (breakTimer) {
+                                clearInterval(breakTimer);
+                                breakTimer = null;
+                            }
+                            
+                            // 结束休息状态
+                            isBreaking = false;
+                            
+                            // 恢复界面
+                            controls.style.display = 'flex';
+                            stats.style.display = 'block';
+                            motivationText.style.display = 'block';
+                            breakMessage.style.display = 'none';
+                            skipBreakContainer.style.display = 'none';
+                            
+                            // 恢复计时状态
+                            secondsRemaining = savedSecondsRemaining;
+                            
+                            // 设置下次休息时间
+                            setNextBreak();
+                            
+                            // 继续计时
+                            startTimer();
+                        }
+                    }
+                ]
+            );
+        }
+        
+        // 设置下次休息时间
+        function setNextBreak() {
+            const nextInterval = Math.floor(
+                Math.random() * (config.maxShortInterval - config.minShortInterval + 1)
+            ) + config.minShortInterval;
+            
+            nextBreakTime = secondsRemaining + nextInterval;
+            nextBreakDuration = config.shortBreakDuration;
+        }
+        
+        // 更新计时器
+        function updateTimer() {
+            secondsRemaining++;
+            totalSeconds++;
+            accumulatedTime++;
+            
+            // 更新专注时间统计
+            sessionTime.textContent = Math.floor(accumulatedTime / 60);
+            
+            // 更新显示
+            updateDisplay();
+            
+            // 检查休息时间
+            if (secondsRemaining >= nextBreakTime) {
+                if (accumulatedTime >= config.longInterval) {
+                    // 90分钟长休息
+                    takeBreak(config.longBreakDuration, true);
+                } else {
+                    // 短休息
+                    takeBreak(config.shortBreakDuration, false);
+                }
+            }
+        }
+        
+        // 休息处理
+        function takeBreak(duration, isLongBreak) {
+            clearInterval(timer);
+            isRunning = false;
+            isBreaking = true;
+            
+            // 保存当前计时状态
+            savedSecondsRemaining = secondsRemaining;
+            
+            // 播放提示音
+            if (isLongBreak) {
+                longBreakSound.play();
+                breakMessage.textContent = "专注90分钟了！请休息20分钟";
+            } else {
+                shortBreakSound.play();
+                breakMessage.textContent = "休息时间到！请放松10秒钟";
+            }
+            
+            // 显示休息界面
+            controls.style.display = 'none';
+            stats.style.display = 'none';
+            motivationText.style.display = 'none';
+            breakMessage.style.display = 'block';
+            skipBreakContainer.style.display = 'block';
+            
+            // 开始休息倒计时
+            breakSecondsRemaining = duration;
+            secondsRemaining = duration;            
+            breakTimer = setInterval(() => {
+                breakSecondsRemaining--;
+                secondsRemaining = breakSecondsRemaining;
+                updateDisplay();
+                
+                if (breakSecondsRemaining <= 0) {
+                    clearInterval(breakTimer);
+                    breakTimer = null;
+                    endBreak(isLongBreak);
+                }
+            }, 1000);
+        }
+        
+        // 结束休息
+        function endBreak(isLongBreak) {
+            isBreaking = false;
+            
+            // 恢复界面
+            controls.style.display = 'flex';
+            stats.style.display = 'block';
+            motivationText.style.display = 'block';
+            breakMessage.style.display = 'none';
+            skipBreakContainer.style.display = 'none';
+            
+            // 恢复计时状态
+            if (isLongBreak) {
+                // 长休息后重置
+                secondsRemaining = 0;
+                accumulatedTime = 0;
+            } else {
+                // 短休息后继续之前的计时
+                secondsRemaining = savedSecondsRemaining;
+            }
+            
+            // 设置下次休息时间
+            if (!isLongBreak) {
+                setNextBreak();
+            } else {
+                // 长休息后重新开始
+                setNextBreak();
+            }
+            
+            // 继续计时
+            startTimer();
+        }
+        
+
+        
+        // 更新显示
+        function updateDisplay() {
+            const minutes = Math.floor(secondsRemaining / 60);
+            const seconds = secondsRemaining % 60;
+            timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // 更新进度环
+            if (isBreaking) {
+                // 休息时显示休息倒计时进度
+                const totalBreakTime = breakSecondsRemaining + (secondsRemaining - breakSecondsRemaining);
+                const progress = ((totalBreakTime - secondsRemaining) / totalBreakTime) * 100;
+                const offset = 1194 - (1194 * progress / 100);
+                circle.style.strokeDashoffset = offset;
+                circle.style.stroke = '#ff6b6b'; // 休息时使用红色
+            } else if (nextBreakTime) {
+                // 正常计时时显示到下次休息的进度
+                const progress = (secondsRemaining / nextBreakTime) * 100;
+                const offset = 1194 - (1194 * progress / 100);
+                circle.style.strokeDashoffset = offset;
+                circle.style.stroke = 'var(--accent-color)'; // 恢复正常颜色
+            }
+        }
+        
+        // 更新激励语
+        function updateMotivation() {
+            motivationText.style.opacity = 0;
+            
+            setTimeout(() => {
+                const randomIndex = Math.floor(Math.random() * motivations.length);
+                motivationText.textContent = motivations[randomIndex];
+                motivationText.style.opacity = 0.8;
+            }, 300);
+        }
+        
+        // 切换主题
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            themeToggle.textContent = newTheme === 'dark' ? '🌓' : '🌞';
+        }
+
+        // 切换专注模式（全屏）
+        function toggleFocusMode() {
+            if (!document.fullscreenElement) {
+                // 进入全屏
+                document.documentElement.requestFullscreen().then(() => {
+                    focusMode.textContent = '退出';
+                }).catch(err => {
+                    console.log('无法进入全屏模式:', err);
+                });
+            } else {
+                // 退出全屏
+                document.exitFullscreen().then(() => {
+                    focusMode.textContent = '专注';
+                }).catch(err => {
+                    console.log('无法退出全屏模式:', err);
+                });
+            }
+        }
+
+        // 监听全屏状态变化
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                focusMode.textContent = '退出';
+            } else {
+                focusMode.textContent = '专注';
+            }
+        });
+        
+        // 事件监听器
+        startBtn.addEventListener('click', () => {
+            if (startBtn.textContent === '开始专注') {
+                startTimer();
+            } else {
+                endTimer();
+            }
+        });
+
+        stopBtn.addEventListener('click', pauseTimer);
+        
+        skipBreakBtn.addEventListener('click', skipBreak);
+        
+        // 点击弹窗背景关闭弹窗
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                hideModal();
+            }
+        });
+        themeToggle.addEventListener('click', toggleTheme);
+        focusMode.addEventListener('click', toggleFocusMode);
+        helpBtn.addEventListener('click', () => {
+            window.location.href = 'demo.html';
+        });
+        
+        // 初始化
+        init();
+    </script>
+</body>
+</html>
